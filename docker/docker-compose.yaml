@@ -567,6 +567,8 @@ services:
   web:
     image: langgenius/dify-web:1.4.2
     restart: always
+    networks:
+      - dokploy-network
     environment:
       CONSOLE_API_URL: ${CONSOLE_API_URL:-}
       APP_API_URL: ${APP_API_URL:-}
