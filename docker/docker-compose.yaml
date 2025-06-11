@@ -542,8 +542,6 @@ services:
     hostname: worker
     image: langgenius/dify-api:1.4.2
     restart: always
-    networks:
-      - dokploy-network
     environment:
       # Use the shared environment variables.
       <<: *shared-api-worker-env
@@ -563,6 +561,7 @@ services:
       # Mount the storage directory to the container, for storing user files.
       - ./volumes/app/storage:/app/api/storage
     networks:
+      - dokploy-network
       - ssrf_proxy_network
       - default
 
