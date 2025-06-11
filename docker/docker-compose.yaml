@@ -542,6 +542,8 @@ services:
     hostname: worker
     image: langgenius/dify-api:1.4.2
     restart: always
+    networks:
+      - dokploy-network
     environment:
       # Use the shared environment variables.
       <<: *shared-api-worker-env
