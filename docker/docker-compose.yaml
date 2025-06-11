@@ -532,6 +532,7 @@ services:
       - ./volumes/app/storage:/app/api/storage
     networks:
       - ssrf_proxy_network
+      - dokploy-network
       - default
 
   # worker service
@@ -559,6 +560,7 @@ services:
       - ./volumes/app/storage:/app/api/storage
     networks:
       - ssrf_proxy_network
+      - dokploy-network
       - default
 
   # Frontend web application.
@@ -645,6 +647,7 @@ services:
       test: [ 'CMD', 'curl', '-f', 'http://localhost:8194/health' ]
     networks:
       - ssrf_proxy_network
+      - dokploy-network
 
   # plugin daemon
   plugin_daemon:
@@ -721,6 +724,7 @@ services:
       SANDBOX_PORT: ${SANDBOX_PORT:-8194}
     networks:
       - ssrf_proxy_network
+      - dokploy-network
       - default
 
   # Certbot service
@@ -784,6 +788,7 @@ services:
     #   - '${EXPOSE_NGINX_SSL_PORT:-443}:${NGINX_SSL_PORT:-443}'
     networks:
       - ssrf_proxy_network
+      - dokploy-network
 
   # The Weaviate vector store.
   weaviate:
