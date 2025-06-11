@@ -530,7 +530,7 @@ services:
         condition: service_started
     volumes:
       # Mount the storage directory to the container, for storing user files.
-      - ./volumes/app/storage:/app/api/storage
+      - dify_app_storage:/app/api/storage
     networks:
       - dokploy-network
       - ssrf_proxy_network
@@ -559,7 +559,7 @@ services:
         condition: service_started
     volumes:
       # Mount the storage directory to the container, for storing user files.
-      - ./volumes/app/storage:/app/api/storage
+      - dify_app_storage:/app/api/storage
     networks:
       - dokploy-network
       - ssrf_proxy_network
@@ -1246,3 +1246,4 @@ networks:
 volumes:
   oradata:
   dify_es01_data:
+  dify_app_storage:
