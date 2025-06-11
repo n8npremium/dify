@@ -567,6 +567,7 @@ services:
   web:
     image: langgenius/dify-web:1.4.2
     container_name: web
+    hostname: web
     restart: always
     networks:
       - dokploy-network
