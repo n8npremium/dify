@@ -532,6 +532,7 @@ services:
       # Mount the storage directory to the container, for storing user files.
       - ./volumes/app/storage:/app/api/storage
     networks:
+      - dokploy-network
       - ssrf_proxy_network
       - default
 
@@ -565,6 +566,8 @@ services:
 
   # Frontend web application.
   web:
+    networks:
+      - dokploy-network
     hostname: web
     image: langgenius/dify-web:1.4.2
     restart: always
@@ -657,6 +660,8 @@ services:
     hostname: plugin_daemon
     image: langgenius/dify-plugin-daemon:0.1.2-local
     restart: always
+    networks:
+      - dokploy-network
     environment:
       # Use the shared environment variables.
       <<: *shared-api-worker-env
@@ -758,6 +763,9 @@ services:
     hostname: nginx
     image: nginx:latest
     restart: always
+    networks:
+      - dokploy-network
+      - default
     volumes:
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
       - ./nginx/proxy.conf.template:/etc/nginx/proxy.conf.template
@@ -1227,6 +1235,8 @@ networks:
   opensearch-net:
     driver: bridge
     internal: true
+  dokploy-network:
+    external: true
 
 volumes:
   oradata:
