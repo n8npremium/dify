@@ -509,7 +509,6 @@ services:
   # API service
   api:
     image: langgenius/dify-api:1.4.2
-    hostname: api
     restart: always
     environment:
       # Use the shared environment variables.
@@ -539,7 +538,6 @@ services:
   # worker service
   # The Celery worker for processing the queue.
   worker:
-    hostname: worker
     image: langgenius/dify-api:1.4.2
     restart: always
     environment:
@@ -569,7 +567,6 @@ services:
   web:
     networks:
       - dokploy-network
-    hostname: web
     image: langgenius/dify-web:1.4.2
     restart: always
     environment:
@@ -594,11 +591,10 @@ services:
       ENABLE_WEBSITE_WATERCRAWL: ${ENABLE_WEBSITE_WATERCRAWL:-true}
   # The postgres database.
   db:
-    hostname: db
-    image: postgres:15-alpine
-    restart: always
     networks:
       - dokploy-network
+    image: postgres:15-alpine
+    restart: always
     environment:
       PGUSER: ${PGUSER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-difyai123456}
@@ -622,13 +618,11 @@ services:
   redis:
     networks:
       - dokploy-network
-    hostname: redis
     image: redis:6-alpine
     restart: always
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD:-difyai123456}
     volumes:
-      # Mount the redis data directory to the container.
       - redis_data:/data
     # Set the redis password when startup redis server.
     command: redis-server --requirepass ${REDIS_PASSWORD:-difyai123456}
@@ -637,7 +631,8 @@ services:
 
   # The DifySandbox
   sandbox:
-    hostname: sandbox
+    networks:
+      - dokploy-network
     image: langgenius/dify-sandbox:0.2.12
     restart: always
     environment:
@@ -658,15 +653,15 @@ services:
     healthcheck:
       test: [ 'CMD', 'curl', '-f', 'http://localhost:8194/health' ]
     networks:
+      - dokploy-network
       - ssrf_proxy_network
 
   # plugin daemon
   plugin_daemon:
-    hostname: plugin_daemon
-    image: langgenius/dify-plugin-daemon:0.1.2-local
-    restart: always
     networks:
       - dokploy-network
+    image: langgenius/dify-plugin-daemon:0.1.2-local
+    restart: always
     environment:
       # Use the shared environment variables.
       <<: *shared-api-worker-env
@@ -714,7 +709,7 @@ services:
     # ports:
     #   - "${EXPOSE_PLUGIN_DEBUGGING_PORT:-5003}:${PLUGIN_DEBUGGING_PORT:-5003}"
     volumes:
-      - ./volumes/plugin_daemon:/app/storage
+      - plugin_daemon:/app/storage
     depends_on:
       db:
         condition: service_healthy
@@ -723,7 +718,6 @@ services:
   # for more information, please refer to
   # https://docs.dify.ai/learn-more/faq/install-faq#18-why-is-ssrf-proxy-needed%3F
   ssrf_proxy:
-    hostname: ssrf_proxy
     image: ubuntu/squid:latest
     restart: always
     volumes:
@@ -738,13 +732,15 @@ services:
       SANDBOX_HOST: ${SSRF_SANDBOX_HOST:-sandbox}
       SANDBOX_PORT: ${SANDBOX_PORT:-8194}
     networks:
+      - dokploy-network
       - ssrf_proxy_network
       - default
 
   # Certbot service
   # use `docker-compose --profile certbot up` to start the certbot service.
   certbot:
-    hostname: certbot
+    networks:
+      - dokploy-network
     image: certbot/certbot
     profiles:
       - certbot
@@ -765,12 +761,10 @@ services:
   # The nginx reverse proxy.
   # used for reverse proxying the API service and Web service.
   nginx:
-    hostname: nginx
-    image: nginx:latest
-    restart: always
     networks:
       - dokploy-network
-      - default
+    image: nginx:latest
+    restart: always
     volumes:
       - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template
       - ./nginx/proxy.conf.template:/etc/nginx/proxy.conf.template
@@ -808,14 +802,14 @@ services:
 
   # The Weaviate vector store.
   weaviate:
-    hostname: weaviate
+    networks:
+      - dokploy-network
     image: semitechnologies/weaviate:1.19.0
     profiles:
       - ''
       - weaviate
     restart: always
     volumes:
-      # Mount the Weaviate data directory to the con tainer.
       - weaviate_data:/var/lib/weaviate
     environment:
       # The Weaviate configurations
@@ -834,18 +828,21 @@ services:
   # Qdrant vector store.
   # (if used, you need to set VECTOR_STORE to qdrant in the api & worker service.)
   qdrant:
-    hostname: qdrant
+    networks:
+      - dokploy-network
     image: langgenius/qdrant:v1.7.3
     profiles:
       - qdrant
     restart: always
     volumes:
-      - ./volumes/qdrant:/qdrant/storage
+      - qdrant_data:/qdrant/storage
     environment:
       QDRANT_API_KEY: ${QDRANT_API_KEY:-difyai123456}
 
   # The Couchbase vector store.
   couchbase-server:
+    networks:
+      - dokploy-network
     build: ./couchbase-server
     profiles:
       - couchbase
@@ -868,7 +865,7 @@ services:
     entrypoint: [ "" ]
     command: sh -c "/opt/couchbase/init/init-cbserver.sh"
     volumes:
-      - ./volumes/couchbase/data:/opt/couchbase/var/lib/couchbase/data
+      - couchbase_data:/opt/couchbase/var/lib/couchbase/data
     healthcheck:
       # ensure bucket was created before proceeding
       test: [ "CMD-SHELL", "curl -s -f -u Administrator:password http://localhost:8091/pools/default/buckets | grep -q '\\[{' || exit 1" ]
@@ -879,7 +876,8 @@ services:
 
   # The pgvector vector database.
   pgvector:
-    hostname: pgvector
+    networks:
+      - dokploy-network
     image: pgvector/pgvector:pg16
     profiles:
       - pgvector
@@ -896,7 +894,7 @@ services:
       PG_BIGM: ${PGVECTOR_PG_BIGM:-false}
       PG_BIGM_VERSION: ${PGVECTOR_PG_BIGM_VERSION:-1.2-20240606}
     volumes:
-      - ./volumes/pgvector/data:/var/lib/postgresql/data
+      - pgvector_data:/var/lib/postgresql/data
       - ./pgvector/docker-entrypoint.sh:/docker-entrypoint.sh
     entrypoint: [ '/docker-entrypoint.sh' ]
     healthcheck:
@@ -907,7 +905,8 @@ services:
 
   # get image from https://www.vastdata.com.cn/
   vastbase:
-    hostname: vastbase
+    networks:
+      - dokploy-network
     image: vastdata/vastbase-vector
     profiles:
       - vastbase
@@ -932,7 +931,8 @@ services:
 
   # pgvecto-rs vector store
   pgvecto-rs:
-    hostname: pgvecto-rs
+    networks:
+      - dokploy-network
     image: tensorchord/pgvecto-rs:pg16-v0.3.0
     profiles:
       - pgvecto-rs
@@ -946,7 +946,7 @@ services:
       # postgres data directory
       PGDATA: ${PGVECTOR_PGDATA:-/var/lib/postgresql/data/pgdata}
     volumes:
-      - ./volumes/pgvecto_rs/data:/var/lib/postgresql/data
+      - pgvecto_rs_data:/var/lib/postgresql/data
     healthcheck:
       test: [ 'CMD', 'pg_isready' ]
       interval: 1s
@@ -955,13 +955,14 @@ services:
 
   # Chroma vector database
   chroma:
-    hostname: chroma
+    networks:
+      - dokploy-network
     image: ghcr.io/chroma-core/chroma:0.5.20
     profiles:
       - chroma
     restart: always
     volumes:
-      - ./volumes/chroma:/chroma/chroma
+      - chroma_data:/chroma/chroma
     environment:
       CHROMA_SERVER_AUTHN_CREDENTIALS: ${CHROMA_SERVER_AUTHN_CREDENTIALS:-difyai123456}
       CHROMA_SERVER_AUTHN_PROVIDER: ${CHROMA_SERVER_AUTHN_PROVIDER:-chromadb.auth.token_authn.TokenAuthenticationServerProvider}
@@ -969,14 +970,15 @@ services:
 
   # OceanBase vector database
   oceanbase:
-    hostname: oceanbase
+    networks:
+      - dokploy-network
     image: oceanbase/oceanbase-ce:4.3.5.1-101000042025031818
     container_name: oceanbase
     profiles:
       - oceanbase
     restart: always
     volumes:
-      - ./volumes/oceanbase/data:/root/ob
+      - oceanbase_data:/root/ob
       - ./volumes/oceanbase/conf:/root/.obd/cluster
       - ./volumes/oceanbase/init.d:/root/boot/init.d
     environment:
@@ -991,7 +993,8 @@ services:
 
   # Oracle vector database
   oracle:
-    hostname: oracle
+    networks:
+      - dokploy-network
     image: container-registry.oracle.com/database/free:latest
     profiles:
       - oracle
@@ -1007,7 +1010,6 @@ services:
 
   # Milvus vector database services
   etcd:
-    hostname: etcd
     container_name: milvus-etcd
     image: quay.io/coreos/etcd:v3.5.5
     profiles:
@@ -1026,10 +1028,10 @@ services:
       timeout: 20s
       retries: 3
     networks:
+      - dokploy-network
       - milvus
 
   minio:
-    hostname: minio
     container_name: milvus-minio
     image: minio/minio:RELEASE.2023-03-20T20-16-18Z
     profiles:
@@ -1038,7 +1040,7 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
     volumes:
-      - ./volumes/milvus/minio:/minio_data
+      - minio_data:/minio_data
     command: minio server /minio_data --console-address ":9001"
     healthcheck:
       test: [ 'CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live' ]
@@ -1046,10 +1048,10 @@ services:
       timeout: 20s
       retries: 3
     networks:
+      - dokploy-network
       - milvus
 
   milvus-standalone:
-    hostname: milvus-standalone
     container_name: milvus-standalone
     image: milvusdb/milvus:v2.5.0-beta
     profiles:
@@ -1060,7 +1062,7 @@ services:
       MINIO_ADDRESS: ${MINIO_ADDRESS:-minio:9000}
       common.security.authorizationEnabled: ${MILVUS_AUTHORIZATION_ENABLED:-true}
     volumes:
-      - ./volumes/milvus/milvus:/var/lib/milvus
+      - milvus_milvus_data:/var/lib/milvus
     healthcheck:
       test: [ 'CMD', 'curl', '-f', 'http://localhost:9091/healthz' ]
       interval: 30s
@@ -1074,11 +1076,11 @@ services:
     #   - 19530:19530
     #   - 9091:9091
     networks:
+      - dokploy-network
       - milvus
 
   # Opensearch vector database
   opensearch:
-    hostname: opensearch
     container_name: opensearch
     image: opensearchproject/opensearch:latest
     profiles:
@@ -1098,10 +1100,10 @@ services:
     volumes:
       - ./volumes/opensearch/data:/usr/share/opensearch/data
     networks:
+      - dokploy-network
       - opensearch-net
 
   opensearch-dashboards:
-    hostname: opensearch-dashboards
     container_name: opensearch-dashboards
     image: opensearchproject/opensearch-dashboards:latest
     profiles:
@@ -1111,13 +1113,15 @@ services:
     volumes:
       - ./volumes/opensearch/opensearch_dashboards.yml:/usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
     networks:
+      - dokploy-network
       - opensearch-net
     depends_on:
       - opensearch
 
   # opengauss vector database.
   opengauss:
-    hostname: opengauss
+    networks:
+      - dokploy-network
     image: opengauss/opengauss:7.0.0-RC1
     profiles:
       - opengauss
@@ -1129,7 +1133,7 @@ services:
       GS_PORT: ${OPENGAUSS_PORT:-6600}
       GS_DB: ${OPENGAUSS_DATABASE:-dify}
     volumes:
-      - ./volumes/opengauss/data:/var/lib/opengauss/data
+      - opengauss_data:/var/lib/opengauss/data
     healthcheck:
       test: [ "CMD-SHELL", "netstat -lntp | grep tcp6 > /dev/null 2>&1" ]
       interval: 10s
@@ -1140,7 +1144,8 @@ services:
 
   # MyScale vector database
   myscale:
-    hostname: myscale
+    networks:
+      - dokploy-network
     container_name: myscale
     image: myscale/myscaledb:1.6.4
     profiles:
@@ -1148,7 +1153,7 @@ services:
     restart: always
     tty: true
     volumes:
-      - ./volumes/myscale/data:/var/lib/clickhouse
+      - myscale_data:/var/lib/clickhouse
       - ./volumes/myscale/log:/var/log/clickhouse-server
       - ./volumes/myscale/config/users.d/custom_users_config.xml:/etc/clickhouse-server/users.d/custom_users_config.xml
     # ports:
@@ -1157,7 +1162,8 @@ services:
   # https://www.elastic.co/guide/en/elasticsearch/reference/current/settings.html
   # https://www.elastic.co/guide/en/elasticsearch/reference/current/docker.html#docker-prod-prerequisites
   elasticsearch:
-    hostname: elasticsearch
+    networks:
+      - dokploy-network
     image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
     container_name: elasticsearch
     profiles:
@@ -1193,7 +1199,8 @@ services:
   # https://www.elastic.co/guide/en/kibana/current/docker.html
   # https://www.elastic.co/guide/en/kibana/current/settings.html
   kibana:
-    hostname: kibana
+    networks:
+      - dokploy-network
     image: docker.elastic.co/kibana/kibana:8.14.3
     container_name: kibana
     profiles:
@@ -1222,13 +1229,14 @@ services:
   # unstructured .
   # (if used, you need to set ETL_TYPE to Unstructured in the api & worker service.)
   unstructured:
-    hostname: unstructured
+    networks:
+      - dokploy-network
     image: downloads.unstructured.io/unstructured-io/unstructured-api:latest
     profiles:
       - unstructured
     restart: always
     volumes:
-      - ./volumes/unstructured:/app/data
+      - unstructured_data:/app/data
 
 networks:
   # create a network between sandbox, api and ssrf_proxy, and can not access outside.
@@ -1246,7 +1254,20 @@ networks:
 volumes:
   oradata:
   dify_es01_data:
+  plugin_daemon:
   dify_app_storage:
   db_data:
   redis_data:
   weaviate_data:
+  qdrant_data:
+  couchbase_data:
+  pgvector_data:
+  pgvecto_rs_data:
+  chroma_data:
+  oceanbase_data:
+  minio_data:
+  milvus_milvus_data:
+  opengauss_data:
+  myscale_data:
+  unstructured_data:
+
