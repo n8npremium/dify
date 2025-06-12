@@ -631,8 +631,6 @@ services:
 
   # The DifySandbox
   sandbox:
-    networks:
-      - dokploy-network
     image: langgenius/dify-sandbox:0.2.12
     restart: always
     environment:
