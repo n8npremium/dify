@@ -55,7 +55,7 @@ services:
         condition: service_started
     volumes:
       # Mount the storage directory to the container, for storing user files.
-      - dify_app_data::/app/api/storage
+      - dify_app_data:/app/api/storage
     networks:
       - ssrf_proxy_network
       - default
